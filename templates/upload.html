@@ -672,7 +672,10 @@ function irPara(indice) {
   telaAtual = indice;
   atualizarTrilha();
   window.scrollTo({ top: 0, behavior: "smooth" });
-  if (indice === 3) renderizarDocumentos();
+  if (indice === 3) {
+    renderizarDocumentos();
+    renderizarChecklistPdfUnico();
+  }
 }
 
 function validarEAvancar() {
@@ -1023,6 +1026,54 @@ document.getElementById("btn-enviar").addEventListener("click", async (e) => {
   } finally {
     btn.disabled = false;
     btn.textContent = "Enviar documentação";
+  }
+});
+
+document.getElementById("btn-enviar-pdf-unico").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-enviar-pdf-unico");
+  const statusDiv = document.getElementById("status-mensagem");
+
+  if (inputPdfCompleto.files.length === 0) {
+    statusDiv.style.color = "#c5221f";
+    statusDiv.textContent = "Selecione o arquivo PDF com a documentação completa.";
+    blocoPdfCompleto.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  btn.disabled = true;
+  statusDiv.style.color = "#4C6478";
+  statusDiv.textContent = "";
+  btn.textContent = "Enviando PDF...";
+
+  try {
+    const formData = new FormData();
+    formData.append("nome", document.getElementById("nome").value);
+    formData.append("cpf", document.getElementById("cpf").value);
+    formData.append("curso", document.getElementById("curso").value);
+    formData.append("email", document.getElementById("email").value);
+    formData.append("sexo", document.querySelector('input[name="sexo"]:checked').value);
+    if (document.getElementById("rg_sem_cpf").checked) formData.append("rg_sem_cpf", "on");
+    formData.append("forma_envio", "pdf_unico");
+    formData.append("pdf_completo", inputPdfCompleto.files[0]);
+    formData.append("checklist", JSON.stringify(checklistIdsMarcados()));
+
+    const resposta = await fetch("/enviar", { method: "POST", body: formData });
+    const resultado = await resposta.json();
+
+    if (resposta.ok) {
+      document.getElementById("link-whatsapp").href =
+        `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(MENSAGEM_WHATSAPP)}`;
+      irPara(4);
+    } else {
+      statusDiv.style.color = "#c5221f";
+      statusDiv.textContent = resultado.erro || "Ocorreu um erro ao enviar.";
+    }
+  } catch (err) {
+    statusDiv.style.color = "#c5221f";
+    statusDiv.textContent = "Erro de conexão. Tente novamente.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Enviar PDF único";
   }
 });
 </script>
